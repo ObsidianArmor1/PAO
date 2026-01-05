@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAO Memory Trainer</title>
+    <style>
+        :root {
+            --deep-charcoal: #121212;
+            --gunmetal-grey: #2a2e35;
+            --steel-blue: #4682b4;
+            --gold: #ffd700;
+            --mid-grey: #6c757d;
+            --text-light: #e0e0e0;
+            --success: #2e7d32;
+            --danger: #c62828;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--deep-charcoal);
+            color: var(--text-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: var(--gunmetal-grey);
+            padding: 2.5rem;
+            border-radius: 14px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            width: 95%;
+            max-width: 600px;
+            text-align: center;
+            border: 1px solid var(--mid-grey);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--mid-grey);
+            padding-bottom: 1rem;
+        }
+
+        .stat-box {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--mid-grey);
+        }
+
+        .stat-value {
+            color: var(--gold);
+            font-weight: 800;
+            font-size: 1.2rem;
+        }
+
+        /* The Number Display */
+        .prompt-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .prompt-number {
+            font-size: 5rem;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--mid-grey);
+            font-size: 0.9rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            background: var(--deep-charcoal);
+            border: 2px solid var(--mid-grey);
+            border-radius: 8px;
+            color: white;
+            font-size: 1.2rem;
+            box-sizing: border-box; /* Fixes padding issues */
+            transition: border 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--steel-blue);
+        }
+
+        .btn-submit {
+            background: var(--gold);
+            color: var(--deep-charcoal);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.1s;
+        }
+
+        .btn-submit:active { transform: translateY(2px); }
+
+        /* Feedback Modal/Overlay styles */
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .feedback.correct {
+            background: rgba(46, 125, 50, 0.2);
+            border: 1px solid var(--success);
+            color: #81c784;
+        }
+
+        .feedback.wrong {
+            background: rgba(198, 40, 40, 0.2);
+            border: 1px solid var(--danger);
+            color: #ef9a9a;
+        }
+
+        .answer-reveal {
+            margin-top: 10px;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .hidden { display: none; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="stat-box">Remaining<br><span class="stat-value" id="count-remaining">0</span></div>
+        <div class="stat-box">Current Streak<br><span class="stat-value" id="current-streak">0</span></div>
+    </div>
+
+    <div id="game-view">
+        <div class="prompt-card">
+            <div class="prompt-number" id="prompt-number">00</div>
+        </div>
+
+        <div class="input-group">
+            <label>LETTERS</label>
+            <input type="text" id="input-letters" placeholder="e.g. OO" autocomplete="off">
+        </div>
+
+        <div class="input-group">
+            <label>SENTENCE (Person Action Object)</label>
+            <input type="text" id="input-sentence" placeholder="e.g. Ozzy Osbourne screams heavy metal" autocomplete="off">
+        </div>
+
+        <button class="btn-submit" onclick="checkAnswer()">SUBMIT</button>
+
+        <div id="feedback-area" class="feedback"></div>
+        <button id="next-btn" class="btn-submit hidden" style="background: var(--steel-blue); margin-top: 15px; color: white;" onclick="nextCard()">NEXT CARD</button>
+    </div>
+
+    <div id="win-view" class="hidden">
+        <h1 style="color: var(--gold)">ALL DONE!</h1>
+        <p>You have mastered the list.</p>
+        <button class="btn-submit" onclick="location.reload()">RESTART</button>
+    </div>
+</div>
+
+<script>
+    // DATA PARSING
+    // I have cleaned up your provided text list into a structured array.
+    const RAW_DATA = [
+        { num: "00", let: "OO", sent: "Ozzy Osbourne screams heavy metal" },
+        { num: "01", let: "OA", sent: "Neo (The One) matrixes the bullet" },
+        { num: "02", let: "OB", sent: "Orlando Bloom boards the pirate ship" },
+        { num: "03", let: "OC", sent: "andits rues treams 1010 digits of pi" }, // As provided
+        { num: "04", let: "OD", sent: "Odin births Thor" },
+        { num: "05", let: "OE", sent: "Oedipus sucks mom's teet" },
+        { num: "06", let: "OS", sent: "Octavia Spencer calculates the launch angle" },
+        { num: "07", let: "OG", sent: "Olivier Giroud scores the penalty kick" },
+        { num: "08", let: "OH", sent: "Ohio State loses to michigan" },
+        { num: "09", let: "ON", sent: "Oscar Nunez annoys michael scott" },
+        { num: "10", let: "AO", sent: "AOC plays among us" },
+        { num: "11", let: "AA", sent: "Ashley Alexander whisks nami matcha" },
+        { num: "12", let: "AB", sent: "Alexander Bell invents the telephone" },
+        { num: "13", let: "AC", sent: "Al Capone bootlegs alcohol" },
+        { num: "14", let: "AD", sent: "Anthony Davis dunks the basketball" },
+        { num: "15", let: "AE", sent: "Albert Einstein solves the equation" },
+        { num: "16", let: "AS", sent: "Arnold Schwartzenager lifts weights" },
+        { num: "17", let: "AG", sent: "Ariana Grande makes out with Ethan Slater" },
+        { num: "18", let: "AH", sent: "Alexander Hamilton performs my shot" },
+        { num: "19", let: "AN", sent: "Alfred Nobel awarded peace prize" },
+        { num: "20", let: "BO", sent: "barack obama legislates obamacare" },
+        { num: "21", let: "BA", sent: "buzz aldrin lands the moon" },
+        { num: "22", let: "BB", sent: "bb8 rolls in the desert" },
+        { num: "23", let: "BC", sent: "bryan cranston cooks crystal meth" },
+        { num: "24", let: "BD", sent: "brooklyn decker models sports illustrated swimsuit" },
+        { num: "25", let: "BE", sent: "Billie Eilish mumbles bad guy" },
+        { num: "26", let: "BS", sent: "Barney stinson picks up women" },
+        { num: "27", let: "BG", sent: "Britney Griner gets arrested in russia" },
+        { num: "28", let: "BH", sent: "Brett Hull skates on ice rink" },
+        { num: "29", let: "BN", sent: "Benjamin Netanyahu commits genocide in gaza" },
+        { num: "30", let: "CO", sent: "Conan O'Brien hosts late night hosw" },
+        { num: "31", let: "CA", sent: "Clay Aiken wins american idol" },
+        { num: "32", let: "CB", sent: "chris brown abuses rihanna" },
+        { num: "33", let: "CC", sent: "CC Sabathia throws a strike" },
+        { num: "34", let: "CD", sent: "cdeez sees these nuts" },
+        { num: "35", let: "CE", sent: "clint eastwood lassos cows" },
+        { num: "36", let: "CS", sent: "charlie sheen pedophiles children" },
+        { num: "37", let: "CG", sent: "Chris gardner interviews at bank" },
+        { num: "38", let: "CH", sent: "chris hemsworth wields mjolnir" },
+        { num: "39", let: "CN", sent: "Cam newton throws touchdown" },
+        { num: "40", let: "DO", sent: "doctor treats patient" },
+        { num: "41", let: "DA", sent: "district attorney prosecutes criminal" },
+        { num: "42", let: "DB", sent: "defensive back intercepts football" },
+        { num: "43", let: "DC", sent: "Dick cheney bombs iraq" },
+        { num: "44", let: "DD", sent: "designated driver drives drunk people home" },
+        { num: "45", let: "DE", sent: "Dale Earnhardt races nascar" },
+        { num: "46", let: "DS", sent: "Dr. Suess writes the cat in the hat" },
+        { num: "47", let: "DG", sent: "David Goggins carries the boats" },
+        { num: "48", let: "DH", sent: "DHL delivers package" },
+        { num: "49", let: "DN", sent: "Daniel Negraneu bluffs his poker hand" },
+        { num: "50", let: "EO", sent: "Elmo snorts cocaine" },
+        { num: "51", let: "EA", sent: "EA Sports announces it's in the game" },
+        { num: "52", let: "EB", sent: "Earthbender bends rock" },
+        { num: "53", let: "EC", sent: "Emilia clarke burns the lannisters" },
+        { num: "54", let: "ED", sent: "Ellen Degeneres bullies employees" },
+        { num: "55", let: "EE", sent: "Electrical Engineer fixes computers" },
+        { num: "56", let: "ES", sent: "Edward Snowden leaks government secrets" },
+        { num: "57", let: "EG", sent: "egg hatches into chicken" },
+        { num: "58", let: "EH", sent: "Evander holyfield knocks out boxer" },
+        { num: "59", let: "EN", sent: "Elyn Nordegren gets cheated on by tiger woods" },
+        { num: "60", let: "SO", sent: "Significant Other proposes on one knee" },
+        { num: "61", let: "SA", sent: "Stephen A. Smith yaps on sportscenter" },
+        { num: "62", let: "SB", sent: "Sergey Brin codes google" },
+        { num: "63", let: "SC", sent: "Santa Claus gifts christmas gifts" },
+        { num: "64", let: "SD", sent: "Snoop dogg smokes weed" },
+        { num: "65", let: "SE", sent: "Sean Evans eats hot wings" },
+        { num: "66", let: "SS", sent: "Steven Spielberg directs ET" },
+        { num: "67", let: "SG", sent: "Sasha Grey sucks dick" },
+        { num: "68", let: "SH", sent: "Sherlock Holmes deduces mystery" },
+        { num: "69", let: "SN", sent: "Sonic collects coins" }
+    ];
+
+    // Initialize progress tracking: Each item needs 2 consecutive correct answers
+    // Map format: { "00": 0, "01": 0 ... } where value is current streak
+    let progressMap = {};
+    RAW_DATA.forEach(item => {
+        progressMap[item.num] = 0;
+    });
+
+    let currentItem = null;
+
+    function playWrongSound() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function playCorrectSound() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    // Helper to normalize strings for comparison (removes punctuation, ignores case)
+    function normalize(str) {
+        return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    function getActivePool() {
+        // Returns items that haven't reached streak of 2 yet
+        return RAW_DATA.filter(item => progressMap[item.num] < 2);
+    }
+
+    function pickRandom() {
+        const pool = getActivePool();
+        document.getElementById('count-remaining').textContent = pool.length;
+
+        if (pool.length === 0) {
+            document.getElementById('game-view').classList.add('hidden');
+            document.getElementById('win-view').classList.remove('hidden');
+            return;
+        }
+
+        const randomIndex = Math.floor(Math.random() * pool.length);
+        currentItem = pool[randomIndex];
+
+        // Update UI
+        document.getElementById('prompt-number').textContent = currentItem.num;
+        document.getElementById('current-streak').textContent = progressMap[currentItem.num] + " / 2";
+        
+        // Clear Inputs
+        document.getElementById('input-letters').value = "";
+        document.getElementById('input-sentence').value = "";
+        document.getElementById('input-letters').focus();
+        
+        // Hide feedback
+        const fb = document.getElementById('feedback-area');
+        fb.style.display = 'none';
+        fb.className = 'feedback';
+        document.getElementById('next-btn').classList.add('hidden');
+    }
+
+    function checkAnswer() {
+        const userLet = normalize(document.getElementById('input-letters').value);
+        const userSent = normalize(document.getElementById('input-sentence').value);
+        
+        const correctLet = normalize(currentItem.let);
+        const correctSent = normalize(currentItem.sent);
+
+        const fb = document.getElementById('feedback-area');
+        fb.style.display = 'block';
+
+        if (userLet === correctLet && userSent === correctSent) {
+            // Correct
+            playCorrectSound();
+            progressMap[currentItem.num]++;
+            
+            fb.className = 'feedback correct';
+            
+            if (progressMap[currentItem.num] >= 2) {
+                fb.innerHTML = `CORRECT! '${currentItem.num}' is mastered and removed from pool.`;
+            } else {
+                fb.innerHTML = `CORRECT! streak: ${progressMap[currentItem.num]}/2`;
+            }
+
+            // Auto advance after short delay
+            setTimeout(pickRandom, 1200);
+
+        } else {
+            // Wrong
+            playWrongSound();
+            progressMap[currentItem.num] = 0; // Reset streak
+            
+            fb.className = 'feedback wrong';
+            fb.innerHTML = `INCORRECT.<br>
+            <div class="answer-reveal">
+                LETTERS: ${currentItem.let}<br>
+                SENTENCE: ${currentItem.sent}
+            </div>`;
+            
+            // Show Next Button so they have time to read the correct answer
+            document.getElementById('next-btn').classList.remove('hidden');
+            document.getElementById('current-streak').textContent = "0 / 2";
+        }
+    }
+
+    function nextCard() {
+        pickRandom();
+    }
+
+    // Support Enter Key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const nextBtn = document.getElementById('next-btn');
+            if (!nextBtn.classList.contains('hidden')) {
+                nextCard();
+            } else {
+                checkAnswer();
+            }
+        }
+    });
+
+    // Start
+    pickRandom();
+
+</script>
+</body>
+</html>
