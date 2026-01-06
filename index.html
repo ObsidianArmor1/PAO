@@ -228,6 +228,20 @@
         </div>
     </div>
 
+    <div id="fail-view" class="hidden">
+        <h2 style="margin-top:0; color: var(--danger)">INCORRECT LETTERS</h2>
+        
+        <div class="verify-box" style="border-left-color: var(--danger);">
+            <div class="verify-label">Correct Letters</div>
+            <div class="verify-text verify-correct" style="color: var(--danger)" id="fail-correct-letters"></div>
+
+            <div class="verify-label">You Typed</div>
+            <div class="verify-text" id="fail-user-letters" style="font-style: italic; color: var(--text-light);"></div>
+        </div>
+
+        <button class="btn-submit" style="background: var(--mid-grey)" onclick="handleFailConfirm()">CONTINUE</button>
+    </div>
+
     <div id="win-view" class="hidden">
         <h1 style="color: var(--gold)">ALL DONE!</h1>
         <p>You have mastered the list.</p>
@@ -360,6 +374,7 @@
         // Reset Views
         document.getElementById('input-view').classList.remove('hidden');
         document.getElementById('verify-view').classList.add('hidden');
+        document.getElementById('fail-view').classList.add('hidden');
         
         const pool = getActivePool();
         document.getElementById('count-remaining').textContent = pool.length;
@@ -385,15 +400,23 @@
 
     function submitAnswer() {
         // 1. Auto-Check Letters (Objective)
-        const userLet = normalize(document.getElementById('input-letters').value);
+        const userLetRaw = document.getElementById('input-letters').value;
+        const userLet = normalize(userLetRaw);
         const correctLet = normalize(currentItem.let);
 
         if (userLet !== correctLet) {
-            // Auto Fail immediately if letters are wrong
+            // Auto Fail
             playWrongSound();
-            alert(`Letters incorrect! Correct was: ${currentItem.let}`);
+            
+            // Show Fail View
+            document.getElementById('input-view').classList.add('hidden');
+            document.getElementById('fail-view').classList.remove('hidden');
+            
+            document.getElementById('fail-correct-letters').textContent = currentItem.let;
+            document.getElementById('fail-user-letters').textContent = userLetRaw || "(No input)";
+            
+            // Reset streak
             progressMap[currentItem.num] = 0; 
-            pickRandom();
             return;
         }
 
@@ -406,6 +429,10 @@
         document.getElementById('show-correct-letters').textContent = currentItem.let;
         document.getElementById('show-correct-sentence').textContent = currentItem.sent;
         document.getElementById('show-user-sentence').textContent = userSent || "(No input)";
+    }
+
+    function handleFailConfirm() {
+        pickRandom();
     }
 
     function handleVerdict(wasCorrect) {
@@ -422,10 +449,16 @@
     // Support Enter Key for Submit
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            const verifyView = document.getElementById('verify-view');
-            // If we are in Input view, Enter submits
-            if (verifyView.classList.contains('hidden')) {
+            const inputView = document.getElementById('input-view');
+            const failView = document.getElementById('fail-view');
+            
+            // If in input view, submit
+            if (!inputView.classList.contains('hidden')) {
                 submitAnswer();
+            }
+            // If in fail view, continue
+            else if (!failView.classList.contains('hidden')) {
+                handleFailConfirm();
             }
         }
     });
