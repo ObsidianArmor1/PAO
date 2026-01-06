@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAO Memory Trainer</title>
+    <title>PAO Memory Trainer - Self Verify</title>
     <style>
         :root {
             --deep-charcoal: #121212;
@@ -59,7 +59,6 @@
             font-size: 1.2rem;
         }
 
-        /* The Number Display */
         .prompt-card {
             background: rgba(0, 0, 0, 0.3);
             border-radius: 10px;
@@ -96,7 +95,7 @@
             border-radius: 8px;
             color: white;
             font-size: 1.2rem;
-            box-sizing: border-box; /* Fixes padding issues */
+            box-sizing: border-box; 
             transition: border 0.2s;
         }
 
@@ -105,9 +104,10 @@
             border-color: var(--steel-blue);
         }
 
+        /* Buttons */
         .btn-submit {
-            background: var(--gold);
-            color: var(--deep-charcoal);
+            background: var(--steel-blue);
+            color: white;
             border: none;
             padding: 15px 40px;
             border-radius: 8px;
@@ -118,33 +118,62 @@
             transition: transform 0.1s;
         }
 
-        .btn-submit:active { transform: translateY(2px); }
-
-        /* Feedback Modal/Overlay styles */
-        .feedback {
+        .btn-group {
+            display: flex;
+            gap: 15px;
             margin-top: 20px;
+        }
+
+        .btn-yes {
+            background: var(--success);
+            flex: 1;
             padding: 15px;
+            border: none;
             border-radius: 8px;
-            font-weight: bold;
-            display: none;
-        }
-
-        .feedback.correct {
-            background: rgba(46, 125, 50, 0.2);
-            border: 1px solid var(--success);
-            color: #81c784;
-        }
-
-        .feedback.wrong {
-            background: rgba(198, 40, 40, 0.2);
-            border: 1px solid var(--danger);
-            color: #ef9a9a;
-        }
-
-        .answer-reveal {
-            margin-top: 10px;
             color: white;
+            font-weight: bold;
             font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .btn-no {
+            background: var(--danger);
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        /* Verification Area */
+        .verify-box {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--gold);
+        }
+
+        .verify-label {
+            font-size: 0.8rem;
+            color: var(--mid-grey);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .verify-text {
+            font-size: 1.1rem;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        .verify-correct {
+            color: var(--gold);
+            font-weight: bold;
         }
 
         .hidden { display: none; }
@@ -159,7 +188,7 @@
         <div class="stat-box">Current Streak<br><span class="stat-value" id="current-streak">0</span></div>
     </div>
 
-    <div id="game-view">
+    <div id="input-view">
         <div class="prompt-card">
             <div class="prompt-number" id="prompt-number">00</div>
         </div>
@@ -171,30 +200,48 @@
 
         <div class="input-group">
             <label>SENTENCE (Person Action Object)</label>
-            <input type="text" id="input-sentence" placeholder="e.g. Ozzy Osbourne screams heavy metal" autocomplete="off">
+            <input type="text" id="input-sentence" placeholder="Type sentence..." autocomplete="off">
         </div>
 
-        <button class="btn-submit" onclick="checkAnswer()">SUBMIT</button>
+        <button class="btn-submit" onclick="submitAnswer()">CHECK</button>
+    </div>
 
-        <div id="feedback-area" class="feedback"></div>
-        <button id="next-btn" class="btn-submit hidden" style="background: var(--steel-blue); margin-top: 15px; color: white;" onclick="nextCard()">NEXT CARD</button>
+    <div id="verify-view" class="hidden">
+        <h2 style="margin-top:0">DID YOU GET IT RIGHT?</h2>
+        
+        <div class="verify-box">
+            <div class="verify-label">Correct Letters</div>
+            <div class="verify-text" id="show-correct-letters"></div>
+
+            <div class="verify-label">Correct Sentence</div>
+            <div class="verify-text verify-correct" id="show-correct-sentence"></div>
+            
+            <hr style="border-color: var(--mid-grey); opacity: 0.3; margin: 15px 0;">
+
+            <div class="verify-label">You Typed</div>
+            <div class="verify-text" id="show-user-sentence" style="font-style: italic; color: var(--text-light);"></div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-no" onclick="handleVerdict(false)">I WAS WRONG</button>
+            <button class="btn-yes" onclick="handleVerdict(true)">I WAS RIGHT</button>
+        </div>
     </div>
 
     <div id="win-view" class="hidden">
         <h1 style="color: var(--gold)">ALL DONE!</h1>
         <p>You have mastered the list.</p>
-        <button class="btn-submit" onclick="location.reload()">RESTART</button>
+        <button class="btn-submit" style="background: var(--gold); color: black;" onclick="location.reload()">RESTART</button>
     </div>
 </div>
 
 <script>
-    // DATA PARSING
-    // I have cleaned up your provided text list into a structured array.
+    // DATA
     const RAW_DATA = [
         { num: "00", let: "OO", sent: "Ozzy Osbourne screams heavy metal" },
         { num: "01", let: "OA", sent: "Neo (The One) matrixes the bullet" },
         { num: "02", let: "OB", sent: "Orlando Bloom boards the pirate ship" },
-        { num: "03", let: "OC", sent: "andits rues treams 1010 digits of pi" }, // As provided
+        { num: "03", let: "OC", sent: "andits rues treams 1010 digits of pi" },
         { num: "04", let: "OD", sent: "Odin births Thor" },
         { num: "05", let: "OE", sent: "Oedipus sucks mom's teet" },
         { num: "06", let: "OS", sent: "Octavia Spencer calculates the launch angle" },
@@ -263,8 +310,6 @@
         { num: "69", let: "SN", sent: "Sonic collects coins" }
     ];
 
-    // Initialize progress tracking: Each item needs 2 consecutive correct answers
-    // Map format: { "00": 0, "01": 0 ... } where value is current streak
     let progressMap = {};
     RAW_DATA.forEach(item => {
         progressMap[item.num] = 0;
@@ -272,6 +317,7 @@
 
     let currentItem = null;
 
+    // Sounds
     function playWrongSound() {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -302,22 +348,24 @@
         osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    // Helper to normalize strings for comparison (removes punctuation, ignores case)
     function normalize(str) {
         return str.toLowerCase().replace(/[^a-z0-9]/g, "");
     }
 
     function getActivePool() {
-        // Returns items that haven't reached streak of 2 yet
         return RAW_DATA.filter(item => progressMap[item.num] < 2);
     }
 
     function pickRandom() {
+        // Reset Views
+        document.getElementById('input-view').classList.remove('hidden');
+        document.getElementById('verify-view').classList.add('hidden');
+        
         const pool = getActivePool();
         document.getElementById('count-remaining').textContent = pool.length;
 
         if (pool.length === 0) {
-            document.getElementById('game-view').classList.add('hidden');
+            document.getElementById('input-view').classList.add('hidden');
             document.getElementById('win-view').classList.remove('hidden');
             return;
         }
@@ -325,7 +373,7 @@
         const randomIndex = Math.floor(Math.random() * pool.length);
         currentItem = pool[randomIndex];
 
-        // Update UI
+        // Fill UI
         document.getElementById('prompt-number').textContent = currentItem.num;
         document.getElementById('current-streak').textContent = progressMap[currentItem.num] + " / 2";
         
@@ -333,70 +381,51 @@
         document.getElementById('input-letters').value = "";
         document.getElementById('input-sentence').value = "";
         document.getElementById('input-letters').focus();
-        
-        // Hide feedback
-        const fb = document.getElementById('feedback-area');
-        fb.style.display = 'none';
-        fb.className = 'feedback';
-        document.getElementById('next-btn').classList.add('hidden');
     }
 
-    function checkAnswer() {
+    function submitAnswer() {
+        // 1. Auto-Check Letters (Objective)
         const userLet = normalize(document.getElementById('input-letters').value);
-        const userSent = normalize(document.getElementById('input-sentence').value);
-        
         const correctLet = normalize(currentItem.let);
-        const correctSent = normalize(currentItem.sent);
 
-        const fb = document.getElementById('feedback-area');
-        fb.style.display = 'block';
+        if (userLet !== correctLet) {
+            // Auto Fail immediately if letters are wrong
+            playWrongSound();
+            alert(`Letters incorrect! Correct was: ${currentItem.let}`);
+            progressMap[currentItem.num] = 0; 
+            pickRandom();
+            return;
+        }
 
-        if (userLet === correctLet && userSent === correctSent) {
-            // Correct
+        // 2. If letters match, go to "Self Verify" mode for Sentence
+        const userSent = document.getElementById('input-sentence').value;
+        
+        document.getElementById('input-view').classList.add('hidden');
+        document.getElementById('verify-view').classList.remove('hidden');
+
+        document.getElementById('show-correct-letters').textContent = currentItem.let;
+        document.getElementById('show-correct-sentence').textContent = currentItem.sent;
+        document.getElementById('show-user-sentence').textContent = userSent || "(No input)";
+    }
+
+    function handleVerdict(wasCorrect) {
+        if (wasCorrect) {
             playCorrectSound();
             progressMap[currentItem.num]++;
-            
-            fb.className = 'feedback correct';
-            
-            if (progressMap[currentItem.num] >= 2) {
-                fb.innerHTML = `CORRECT! '${currentItem.num}' is mastered and removed from pool.`;
-            } else {
-                fb.innerHTML = `CORRECT! streak: ${progressMap[currentItem.num]}/2`;
-            }
-
-            // Auto advance after short delay
-            setTimeout(pickRandom, 1200);
-
         } else {
-            // Wrong
             playWrongSound();
             progressMap[currentItem.num] = 0; // Reset streak
-            
-            fb.className = 'feedback wrong';
-            fb.innerHTML = `INCORRECT.<br>
-            <div class="answer-reveal">
-                LETTERS: ${currentItem.let}<br>
-                SENTENCE: ${currentItem.sent}
-            </div>`;
-            
-            // Show Next Button so they have time to read the correct answer
-            document.getElementById('next-btn').classList.remove('hidden');
-            document.getElementById('current-streak').textContent = "0 / 2";
         }
-    }
-
-    function nextCard() {
         pickRandom();
     }
 
-    // Support Enter Key
+    // Support Enter Key for Submit
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            const nextBtn = document.getElementById('next-btn');
-            if (!nextBtn.classList.contains('hidden')) {
-                nextCard();
-            } else {
-                checkAnswer();
+            const verifyView = document.getElementById('verify-view');
+            // If we are in Input view, Enter submits
+            if (verifyView.classList.contains('hidden')) {
+                submitAnswer();
             }
         }
     });
