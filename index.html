@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAO Memory Trainer - Self Verify</title>
+    <title>PAO Memory Trainer - Persistent</title>
     <style>
         :root {
             --deep-charcoal: #121212;
@@ -245,7 +245,7 @@
     <div id="win-view" class="hidden">
         <h1 style="color: var(--gold)">ALL DONE!</h1>
         <p>You have mastered the list.</p>
-        <button class="btn-submit" style="background: var(--gold); color: black;" onclick="location.reload()">RESTART</button>
+        <button class="btn-submit" style="background: var(--gold); color: black;" onclick="hardReset()">RESTART</button>
     </div>
 </div>
 
@@ -325,11 +325,28 @@
     ];
 
     let progressMap = {};
-    RAW_DATA.forEach(item => {
-        progressMap[item.num] = 0;
-    });
-
     let currentItem = null;
+
+    // PERSISTENCE LOGIC
+    function loadProgress() {
+        const saved = localStorage.getItem('pao-progress-v1');
+        if (saved) {
+            progressMap = JSON.parse(saved);
+        } else {
+            RAW_DATA.forEach(item => {
+                progressMap[item.num] = 0;
+            });
+        }
+    }
+
+    function saveProgress() {
+        localStorage.setItem('pao-progress-v1', JSON.stringify(progressMap));
+    }
+
+    function hardReset() {
+        localStorage.removeItem('pao-progress-v1');
+        location.reload();
+    }
 
     // Sounds
     function playWrongSound() {
@@ -367,7 +384,7 @@
     }
 
     function getActivePool() {
-        return RAW_DATA.filter(item => progressMap[item.num] < 2);
+        return RAW_DATA.filter(item => (progressMap[item.num] || 0) < 2);
     }
 
     function pickRandom() {
@@ -390,7 +407,7 @@
 
         // Fill UI
         document.getElementById('prompt-number').textContent = currentItem.num;
-        document.getElementById('current-streak').textContent = progressMap[currentItem.num] + " / 2";
+        document.getElementById('current-streak').textContent = (progressMap[currentItem.num] || 0) + " / 2";
         
         // Clear Inputs
         document.getElementById('input-letters').value = "";
@@ -415,8 +432,9 @@
             document.getElementById('fail-correct-letters').textContent = currentItem.let;
             document.getElementById('fail-user-letters').textContent = userLetRaw || "(No input)";
             
-            // Reset streak
+            // Reset streak & Save
             progressMap[currentItem.num] = 0; 
+            saveProgress();
             return;
         }
 
@@ -443,6 +461,7 @@
             playWrongSound();
             progressMap[currentItem.num] = 0; // Reset streak
         }
+        saveProgress();
         pickRandom();
     }
 
@@ -464,6 +483,7 @@
     });
 
     // Start
+    loadProgress();
     pickRandom();
 
 </script>
