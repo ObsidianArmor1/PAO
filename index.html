@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAO Memory Trainer - Persistent</title>
+    <title>PAO Master v2</title>
     <style>
         :root {
             --deep-charcoal: #121212;
@@ -14,6 +14,7 @@
             --text-light: #e0e0e0;
             --success: #2e7d32;
             --danger: #c62828;
+            --warning: #f57f17;
         }
 
         body {
@@ -25,6 +26,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            overflow-y: auto; /* Allow scrolling for stats */
         }
 
         .container {
@@ -36,18 +38,21 @@
             max-width: 600px;
             text-align: center;
             border: 1px solid var(--mid-grey);
+            position: relative;
         }
 
+        /* HEADER & CONTROLS */
         .header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 2rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
             border-bottom: 1px solid var(--mid-grey);
             padding-bottom: 1rem;
         }
 
         .stat-box {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: var(--mid-grey);
@@ -59,12 +64,44 @@
             font-size: 1.2rem;
         }
 
+        .icon-btn {
+            background: none;
+            border: 1px solid var(--mid-grey);
+            color: var(--text-light);
+            border-radius: 6px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .icon-btn:hover { background: var(--mid-grey); }
+        .icon-btn.active { background: var(--gold); color: var(--deep-charcoal); border-color: var(--gold); }
+
+        .control-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* PROMPT CARD */
         .prompt-card {
             background: rgba(0, 0, 0, 0.3);
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 25px;
             border: 1px solid rgba(255, 255, 255, 0.05);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .prompt-text {
+            font-size: 1.8rem; /* Smaller for sentence */
+            font-weight: bold;
+            color: white;
+            line-height: 1.3;
         }
 
         .prompt-number {
@@ -74,6 +111,7 @@
             text-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
+        /* INPUTS */
         .input-group {
             margin-bottom: 20px;
             text-align: left;
@@ -98,13 +136,9 @@
             box-sizing: border-box; 
             transition: border 0.2s;
         }
+        input:focus { outline: none; border-color: var(--steel-blue); }
 
-        input:focus {
-            outline: none;
-            border-color: var(--steel-blue);
-        }
-
-        /* Buttons */
+        /* BUTTONS */
         .btn-submit {
             background: var(--steel-blue);
             color: white;
@@ -118,37 +152,48 @@
             transition: transform 0.1s;
         }
 
-        .btn-group {
-            display: flex;
-            gap: 15px;
+        .btn-group { display: flex; gap: 15px; margin-top: 20px; }
+        .btn-yes { background: var(--success); flex: 1; padding: 15px; border-radius: 8px; color: white; font-weight: bold; font-size: 1.1rem; border:none; cursor: pointer; }
+        .btn-no { background: var(--danger); flex: 1; padding: 15px; border-radius: 8px; color: white; font-weight: bold; font-size: 1.1rem; border:none; cursor: pointer; }
+
+        /* HEATMAP MODAL */
+        #stats-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--gunmetal-grey);
+            border-radius: 14px;
+            z-index: 10;
+            padding: 2rem;
+            box-sizing: border-box;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+        }
+        
+        #heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 6px;
             margin-top: 20px;
+            overflow-y: auto;
+            max-height: 400px;
         }
 
-        .btn-yes {
-            background: var(--success);
-            flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            color: white;
+        .heat-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
             font-weight: bold;
-            font-size: 1.1rem;
-            cursor: pointer;
+            border-radius: 4px;
+            background: #444;
+            color: #aaa;
         }
+        .heat-green { background: var(--success); color: white; }
+        .heat-yellow { background: var(--warning); color: black; }
+        .heat-red { background: var(--danger); color: white; }
 
-        .btn-no {
-            background: var(--danger);
-            flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            font-size: 1.1rem;
-            cursor: pointer;
-        }
-
-        /* Verification Area */
+        /* VERIFY BOX */
         .verify-box {
             background: rgba(0,0,0,0.2);
             padding: 20px;
@@ -157,26 +202,18 @@
             margin-bottom: 20px;
             border-left: 4px solid var(--gold);
         }
+        .verify-label { font-size: 0.8rem; color: var(--mid-grey); text-transform: uppercase; margin-bottom: 5px; }
+        .verify-text { font-size: 1.1rem; color: white; margin-bottom: 15px; }
+        .verify-correct { color: var(--gold); font-weight: bold; }
 
-        .verify-label {
+        .hidden { display: none !important; }
+        
+        .shortcut-hint {
             font-size: 0.8rem;
             color: var(--mid-grey);
-            text-transform: uppercase;
-            margin-bottom: 5px;
+            margin-top: 10px;
+            display: block;
         }
-
-        .verify-text {
-            font-size: 1.1rem;
-            color: white;
-            margin-bottom: 15px;
-        }
-        
-        .verify-correct {
-            color: var(--gold);
-            font-weight: bold;
-        }
-
-        .hidden { display: none; }
 
     </style>
 </head>
@@ -184,68 +221,75 @@
 
 <div class="container">
     <div class="header">
-        <div class="stat-box">Remaining<br><span class="stat-value" id="count-remaining">0</span></div>
-        <div class="stat-box">Current Streak<br><span class="stat-value" id="current-streak">0</span></div>
+        <div class="stat-box">Pool Size<br><span class="stat-value" id="count-remaining">0</span></div>
+        <button class="icon-btn" onclick="toggleStats()">📊 STATS / HEATMAP</button>
+        <div class="stat-box">Streak<br><span class="stat-value" id="current-streak">0</span></div>
+    </div>
+
+    <div class="control-row">
+        <button class="icon-btn" id="btn-mode" onclick="toggleMode()">MODE: NORMAL</button>
+        <button class="icon-btn" id="btn-cram" onclick="toggleCram()">FILTER: ALL</button>
     </div>
 
     <div id="input-view">
         <div class="prompt-card">
-            <div class="prompt-number" id="prompt-number">00</div>
+            <div id="prompt-display">...</div>
         </div>
 
-        <div class="input-group">
-            <label>LETTERS</label>
-            <input type="text" id="input-letters" placeholder="e.g. OO" autocomplete="off">
-        </div>
+        <div id="dynamic-inputs">
+            </div>
 
-        <div class="input-group">
-            <label>SENTENCE (Person Action Object)</label>
-            <input type="text" id="input-sentence" placeholder="Type sentence..." autocomplete="off">
-        </div>
-
-        <button class="btn-submit" onclick="submitAnswer()">CHECK</button>
+        <button class="btn-submit" onclick="submitAnswer()">CHECK (Enter)</button>
     </div>
 
     <div id="verify-view" class="hidden">
         <h2 style="margin-top:0">DID YOU GET IT RIGHT?</h2>
         
         <div class="verify-box">
-            <div class="verify-label">Correct Letters</div>
-            <div class="verify-text" id="show-correct-letters"></div>
-
-            <div class="verify-label">Correct Sentence</div>
-            <div class="verify-text verify-correct" id="show-correct-sentence"></div>
+            <div class="verify-label">Correct Answer</div>
+            <div class="verify-text verify-correct" id="show-correct-full"></div>
             
             <hr style="border-color: var(--mid-grey); opacity: 0.3; margin: 15px 0;">
 
             <div class="verify-label">You Typed</div>
-            <div class="verify-text" id="show-user-sentence" style="font-style: italic; color: var(--text-light);"></div>
+            <div class="verify-text" id="show-user-full" style="font-style: italic; color: var(--text-light);"></div>
         </div>
 
         <div class="btn-group">
-            <button class="btn-no" onclick="handleVerdict(false)">I WAS WRONG</button>
-            <button class="btn-yes" onclick="handleVerdict(true)">I WAS RIGHT</button>
+            <button class="btn-no" onclick="handleVerdict(false)">WRONG (Left)</button>
+            <button class="btn-yes" onclick="handleVerdict(true)">RIGHT (Right)</button>
         </div>
     </div>
 
     <div id="fail-view" class="hidden">
-        <h2 style="margin-top:0; color: var(--danger)">INCORRECT LETTERS</h2>
+        <h2 style="margin-top:0; color: var(--danger)">INCORRECT</h2>
         
         <div class="verify-box" style="border-left-color: var(--danger);">
-            <div class="verify-label">Correct Letters</div>
-            <div class="verify-text verify-correct" style="color: var(--danger)" id="fail-correct-letters"></div>
+            <div class="verify-label">Correct Value</div>
+            <div class="verify-text verify-correct" style="color: var(--danger)" id="fail-correct-val"></div>
 
             <div class="verify-label">You Typed</div>
-            <div class="verify-text" id="fail-user-letters" style="font-style: italic; color: var(--text-light);"></div>
+            <div class="verify-text" id="fail-user-val" style="font-style: italic; color: var(--text-light);"></div>
         </div>
 
-        <button class="btn-submit" style="background: var(--mid-grey)" onclick="handleFailConfirm()">CONTINUE</button>
+        <button class="btn-submit" style="background: var(--mid-grey)" onclick="handleFailConfirm()">CONTINUE (Enter)</button>
     </div>
 
     <div id="win-view" class="hidden">
-        <h1 style="color: var(--gold)">ALL DONE!</h1>
-        <p>You have mastered the list.</p>
-        <button class="btn-submit" style="background: var(--gold); color: black;" onclick="hardReset()">RESTART</button>
+        <h1 style="color: var(--gold)">POOL CLEARED!</h1>
+        <p>You have mastered the current filter.</p>
+        <button class="btn-submit" style="background: var(--gold); color: black;" onclick="hardReset()">RESET PROGRESS</button>
+        <br><br>
+        <button class="icon-btn" onclick="toggleCram()">Change Filter</button>
+    </div>
+
+    <div id="stats-overlay">
+        <div class="header">
+            <h2 style="margin:0">MASTERY HEATMAP</h2>
+            <button class="icon-btn" onclick="toggleStats()">CLOSE (Esc)</button>
+        </div>
+        <p style="font-size:0.9rem; color: var(--mid-grey); margin-top:-10px;">Green = Mastered (2+), Yellow = 1, Red = 0</p>
+        <div id="heatmap-grid"></div>
     </div>
 </div>
 
@@ -326,31 +370,17 @@
 
     let progressMap = {};
     let currentItem = null;
+    
+    // STATE VARIABLES
+    let isReverseMode = false; // false = Normal (00 -> Sent), true = Reverse (Sent -> 00)
+    let isCramMode = false;    // false = All <2, true = Only <1 (0 or recently failed)
 
-    // PERSISTENCE LOGIC
-    function loadProgress() {
-        const saved = localStorage.getItem('pao-progress-v1');
-        if (saved) {
-            progressMap = JSON.parse(saved);
-        } else {
-            RAW_DATA.forEach(item => {
-                progressMap[item.num] = 0;
-            });
-        }
-    }
+    // UTILS
+    function normalize(str) { return str.toLowerCase().replace(/[^a-z0-9]/g, ""); }
 
-    function saveProgress() {
-        localStorage.setItem('pao-progress-v1', JSON.stringify(progressMap));
-    }
-
-    function hardReset() {
-        localStorage.removeItem('pao-progress-v1');
-        location.reload();
-    }
-
-    // Sounds
+    // SOUNDS
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playWrongSound() {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sawtooth';
@@ -363,9 +393,7 @@
         osc.start();
         osc.stop(audioCtx.currentTime + 0.3);
     }
-
     function playCorrectSound() {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
@@ -379,12 +407,78 @@
         osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    function normalize(str) {
-        return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+    // STORAGE
+    function loadProgress() {
+        const saved = localStorage.getItem('pao-progress-v2');
+        if (saved) {
+            progressMap = JSON.parse(saved);
+        } else {
+            RAW_DATA.forEach(item => progressMap[item.num] = 0);
+        }
+    }
+    function saveProgress() {
+        localStorage.setItem('pao-progress-v2', JSON.stringify(progressMap));
+        renderHeatmap(); // Update stats whenever we save
+    }
+    function hardReset() {
+        if(confirm("Are you sure? This will wipe all mastery progress.")) {
+            localStorage.removeItem('pao-progress-v2');
+            location.reload();
+        }
+    }
+
+    // LOGIC
+    function toggleMode() {
+        isReverseMode = !isReverseMode;
+        document.getElementById('btn-mode').textContent = isReverseMode ? "MODE: REVERSE" : "MODE: NORMAL";
+        document.getElementById('btn-mode').classList.toggle('active', isReverseMode);
+        pickRandom();
+    }
+
+    function toggleCram() {
+        isCramMode = !isCramMode;
+        document.getElementById('btn-cram').textContent = isCramMode ? "FILTER: WEAK ONLY" : "FILTER: ALL";
+        document.getElementById('btn-cram').classList.toggle('active', isCramMode);
+        pickRandom();
+    }
+
+    function toggleStats() {
+        const overlay = document.getElementById('stats-overlay');
+        if (overlay.style.display === 'flex') {
+            overlay.style.display = 'none';
+        } else {
+            overlay.style.display = 'flex';
+            renderHeatmap();
+        }
+    }
+
+    function renderHeatmap() {
+        const grid = document.getElementById('heatmap-grid');
+        grid.innerHTML = '';
+        RAW_DATA.forEach(item => {
+            const streak = progressMap[item.num] || 0;
+            const div = document.createElement('div');
+            div.className = 'heat-cell';
+            div.textContent = item.num;
+            
+            if (streak >= 2) div.classList.add('heat-green');
+            else if (streak === 1) div.classList.add('heat-yellow');
+            else div.classList.add('heat-red');
+            
+            grid.appendChild(div);
+        });
     }
 
     function getActivePool() {
-        return RAW_DATA.filter(item => (progressMap[item.num] || 0) < 2);
+        // Filter: 
+        // 1. Must be < 2 (Not Mastered)
+        // 2. If Cram Mode, must be < 1 (Weak only)
+        return RAW_DATA.filter(item => {
+            const streak = progressMap[item.num] || 0;
+            if (streak >= 2) return false; // Always hide mastered
+            if (isCramMode && streak >= 1) return false; // Hide "In Progress" in Cram mode
+            return true;
+        });
     }
 
     function pickRandom() {
@@ -392,7 +486,8 @@
         document.getElementById('input-view').classList.remove('hidden');
         document.getElementById('verify-view').classList.add('hidden');
         document.getElementById('fail-view').classList.add('hidden');
-        
+        document.getElementById('win-view').classList.add('hidden');
+
         const pool = getActivePool();
         document.getElementById('count-remaining').textContent = pool.length;
 
@@ -405,48 +500,93 @@
         const randomIndex = Math.floor(Math.random() * pool.length);
         currentItem = pool[randomIndex];
 
-        // Fill UI
-        document.getElementById('prompt-number').textContent = currentItem.num;
-        document.getElementById('current-streak').textContent = (progressMap[currentItem.num] || 0) + " / 2";
-        
-        // Clear Inputs
-        document.getElementById('input-letters').value = "";
-        document.getElementById('input-sentence').value = "";
-        document.getElementById('input-letters').focus();
+        const streak = progressMap[currentItem.num] || 0;
+        document.getElementById('current-streak').textContent = streak + " / 2";
+        document.getElementById('current-streak').style.color = streak === 1 ? 'var(--warning)' : 'var(--danger)';
+
+        renderInputs();
+    }
+
+    function renderInputs() {
+        const promptDisplay = document.getElementById('prompt-display');
+        const inputContainer = document.getElementById('dynamic-inputs');
+        inputContainer.innerHTML = ''; // Clear previous
+
+        if (!isReverseMode) {
+            // NORMAL: Show Number (00), Ask Letters + Sentence
+            promptDisplay.className = 'prompt-number';
+            promptDisplay.textContent = currentItem.num;
+            
+            inputContainer.innerHTML = `
+                <div class="input-group">
+                    <label>LETTERS</label>
+                    <input type="text" id="input-1" placeholder="e.g. OO" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>SENTENCE</label>
+                    <input type="text" id="input-2" placeholder="Type sentence..." autocomplete="off">
+                </div>
+            `;
+        } else {
+            // REVERSE: Show Sentence, Ask Number + Letters
+            promptDisplay.className = 'prompt-text';
+            promptDisplay.textContent = currentItem.sent;
+
+            inputContainer.innerHTML = `
+                <div class="input-group">
+                    <label>NUMBER</label>
+                    <input type="number" id="input-1" placeholder="e.g. 00" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>LETTERS</label>
+                    <input type="text" id="input-2" placeholder="e.g. OO" autocomplete="off">
+                </div>
+            `;
+        }
+        document.getElementById('input-1').focus();
     }
 
     function submitAnswer() {
-        // 1. Auto-Check Letters (Objective)
-        const userLetRaw = document.getElementById('input-letters').value;
-        const userLet = normalize(userLetRaw);
-        const correctLet = normalize(currentItem.let);
+        const val1 = normalize(document.getElementById('input-1').value); // Letters (Normal) or Number (Reverse)
+        const val2Raw = document.getElementById('input-2').value; // Sentence (Normal) or Letters (Reverse)
+        
+        let objCorrect = ""; // The thing we check automatically
+        let userObj = "";
 
-        if (userLet !== correctLet) {
-            // Auto Fail
+        if (!isReverseMode) {
+            objCorrect = normalize(currentItem.let);
+            userObj = val1;
+        } else {
+            objCorrect = normalize(currentItem.num);
+            userObj = val1;
+        }
+
+        // 1. AUTO CHECK 
+        if (userObj !== objCorrect) {
             playWrongSound();
-            
-            // Show Fail View
             document.getElementById('input-view').classList.add('hidden');
             document.getElementById('fail-view').classList.remove('hidden');
             
-            document.getElementById('fail-correct-letters').textContent = currentItem.let;
-            document.getElementById('fail-user-letters').textContent = userLetRaw || "(No input)";
+            document.getElementById('fail-correct-val').textContent = isReverseMode ? currentItem.num : currentItem.let;
+            document.getElementById('fail-user-val').textContent = document.getElementById('input-1').value;
             
-            // Reset streak & Save
             progressMap[currentItem.num] = 0; 
             saveProgress();
             return;
         }
 
-        // 2. If letters match, go to "Self Verify" mode for Sentence
-        const userSent = document.getElementById('input-sentence').value;
-        
+        // 2. SELF VERIFY
         document.getElementById('input-view').classList.add('hidden');
         document.getElementById('verify-view').classList.remove('hidden');
-
-        document.getElementById('show-correct-letters').textContent = currentItem.let;
-        document.getElementById('show-correct-sentence').textContent = currentItem.sent;
-        document.getElementById('show-user-sentence').textContent = userSent || "(No input)";
+        
+        // Show Full Answer
+        document.getElementById('show-correct-full').innerHTML = 
+            `<strong>${currentItem.num}</strong> - <strong>${currentItem.let}</strong><br>${currentItem.sent}`;
+        
+        document.getElementById('show-user-full').textContent = val2Raw;
+        
+        // Setup shortcuts focus to body so arrow keys work
+        document.activeElement.blur();
     }
 
     function handleFailConfirm() {
@@ -459,30 +599,38 @@
             progressMap[currentItem.num]++;
         } else {
             playWrongSound();
-            progressMap[currentItem.num] = 0; // Reset streak
+            progressMap[currentItem.num] = 0;
         }
         saveProgress();
         pickRandom();
     }
 
-    // Support Enter Key for Submit
+    // KEYBOARD SHORTCUTS
     document.addEventListener('keydown', (e) => {
+        // ESC = Close Stats
+        if (e.key === 'Escape') {
+            document.getElementById('stats-overlay').style.display = 'none';
+            return;
+        }
+
+        const inputView = document.getElementById('input-view');
+        const verifyView = document.getElementById('verify-view');
+        const failView = document.getElementById('fail-view');
+
+        // ENTER
         if (e.key === 'Enter') {
-            const inputView = document.getElementById('input-view');
-            const failView = document.getElementById('fail-view');
-            
-            // If in input view, submit
-            if (!inputView.classList.contains('hidden')) {
-                submitAnswer();
-            }
-            // If in fail view, continue
-            else if (!failView.classList.contains('hidden')) {
-                handleFailConfirm();
-            }
+            if (!inputView.classList.contains('hidden')) submitAnswer();
+            else if (!failView.classList.contains('hidden')) handleFailConfirm();
+        }
+
+        // ARROWS (Only in Verify View)
+        if (!verifyView.classList.contains('hidden')) {
+            if (e.key === 'ArrowLeft') handleVerdict(false);
+            if (e.key === 'ArrowRight') handleVerdict(true);
         }
     });
 
-    // Start
+    // INIT
     loadProgress();
     pickRandom();
 
